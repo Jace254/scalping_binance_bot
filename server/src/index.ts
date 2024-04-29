@@ -13,14 +13,13 @@ const config = {
   stopLoss: 0.996,
   stopLimitProfit: 1.00199,
   stopLimit: 0.9961,
-  baseCoin: 'ETHFI',
+  baseCoin: 'ATA',
   quoteCoin: 'USDT',
-  symbol: "ETHFIUSDT",
-  streamSymbol: 'ethfiusdt',
-  initialInvestment: 11,
-  lotSize: 1,
-  priceFilter: 3,
-
+  symbol: "ATAUSDT",
+  streamSymbol: 'atausdt',
+  initialInvestment: 10.5,
+  lotSize: 0,
+  priceFilter: 4,
   baseAssetPrecision: 8
 };
 
@@ -30,6 +29,7 @@ let quantity: number;
 let open = false;
 let sold = false
 let realCurrentPrice: number;
+let currentOrder: Order;
 
 async function checkOrderStatus(
   symbol: string,
@@ -58,9 +58,7 @@ async function processOrder(v: Order, action: string, currentPrice: number) {
           console.log(
             `(${action})SOLD ${config.baseCoin} at $${v.price} worth $${
               quantity * Number(v.price)
-            } with an amount of ${quantity}`,
-            "color:" + action === 'profit' ? '#029c8e;' : '#ea5f40;' + 'font-weight: bold;'
-          );
+            } with an amount of ${quantity}`);
           quantity = Number((config.initialInvestment / currentPrice).toFixed(config.lotSize));
           //then buy instantly
           setTimeout(async () => {
@@ -74,6 +72,7 @@ async function processOrder(v: Order, action: string, currentPrice: number) {
             .then((v) => {
               open = false;
               sold = false;
+              currentOrder = v
               console.log(
                 `BOUGHT ${config.baseCoin} worth $${config.initialInvestment} at $${currentPrice} with an amount of ${quantity}`
               );
@@ -94,6 +93,15 @@ async function processOrder(v: Order, action: string, currentPrice: number) {
     });
 }
 
+async function cancelOrder(order: Order) {
+  await client.cancelOrder({
+    orderId: order.orderId,
+    symbol: config.symbol
+  }).then(() => {
+    open = false
+  })
+}
+
 
 connectToBinanceWebSocketStream({
   "message": async ({ d }, send) => {
@@ -112,7 +120,8 @@ connectToBinanceWebSocketStream({
             type: OrderType.MARKET,
             quantity: quantity.toFixed(config.baseAssetPrecision),
           })
-          .then(() => {
+          .then((v) => {
+            currentOrder = v
             console.log(
               `BOUGHT ${config.baseCoin} worth $${config.initialInvestment} at $${currentPrice} with an amount of ${quantity}`
             );
@@ -134,6 +143,7 @@ connectToBinanceWebSocketStream({
             })
             .then(async (v) => {
               open = true;
+              currentOrder = v
               await processOrder(v, "profit", currentPrice);
               currentPrice = data.c
             });
@@ -141,6 +151,10 @@ connectToBinanceWebSocketStream({
       }
 
       if (data.c <= currentPrice * config.stopLimit) {
+        console.log('sth should happen')
+        if(open && currentOrder.side === 'SELL') {
+          cancelOrder(currentOrder)
+        }
         // sell
         if (!open) {
           console.log(`loss ${currentPrice * config.stopLoss}`);
@@ -155,6 +169,7 @@ connectToBinanceWebSocketStream({
             })
             .then(async (v) => {
               open = true;
+              currentOrder = v
               await processOrder(v, "loss", currentPrice);
               currentPrice = data.c
             });

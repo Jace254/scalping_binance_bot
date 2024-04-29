@@ -1,0 +1,12 @@
+:root {
+  color-scheme: light;
+  --at-apply: "bg-accent dark:bg-backround";
+  --dot-color: #c6d0e1
+}
+
+.dark {
+  color-scheme: dark;
+  --dot-color: #2f2f39
+}
+
+

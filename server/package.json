@@ -1,0 +1,12 @@
+{
+    "name": "scalping_binance_bot_server",
+    "scripts": {
+        "watch": "tsc  -w",
+        "dev": "nodemon dist/index.js"
+    },
+    "dependencies": {
+        "binance-api-node": "^0.12.7",
+        "express": "^4.19.2",
+        "socket.io": "^4.7.5"
+    }
+}
